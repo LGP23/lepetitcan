@@ -1,0 +1,457 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  peluquero
+  cliente
+}
+
+enum PetSize {
+  toy
+  pequeno
+  mediano
+  grande
+  gigante
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  in_progress
+  completed
+  cancelled
+}
+
+enum PriceType {
+  fixed
+  hourly
+}
+
+enum OwnerSource {
+  web
+  whatsapp
+  instagram
+  facebook
+  sms
+  phone
+  presencial
+  ai_agent
+}
+
+enum NotificationChannel {
+  whatsapp
+  email
+  sms
+  instagram
+  facebook
+}
+
+enum NotificationType {
+  appointment_confirmation
+  appointment_reminder
+  appointment_cancellation
+  appointment_modification
+  pickup_reminder
+  two_days_before
+  one_day_before
+  two_hours_before
+  six_weeks_followup
+  birthday
+  review_request
+  custom
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
+enum PaymentMethod {
+  cash
+  card
+  bizum
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String?
+  name              String
+  image             String?
+  role              Role      @default(cliente)
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  owner             Owner?
+  accounts          Account[]
+  sessions          Session[]
+  staffAppointments Appointment[] @relation("StaffAppointments")
+  auditLogs         AuditLog[]
+  calendarToken     GoogleCalendarToken?
+
+  @@map("users")
+}
+
+model Owner {
+  id                  String             @id @default(cuid())
+  name                String
+  email               String?
+  phone               String?
+  address             String?
+  notes               String?
+  source              OwnerSource        @default(presencial)
+  prefChannel         NotificationChannel @default(whatsapp)
+  marketingConsent    Boolean            @default(false)
+  marketingConsentAt  DateTime?
+  dataRetentionUntil  DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  user                User?
+  pets                PetOwner[]
+  appointments        Appointment[]
+  productSales        ProductSale[]
+  notifications       Notification[]
+  consentRecords      ConsentRecord[]
+  dataDeletionRequests DataDeletionRequest[]
+
+  @@map("owners")
+}
+
+model Pet {
+  id         String   @id @default(cuid())
+  name       String
+  breed      String?
+  size       PetSize
+  birthDate  DateTime?
+  photoUrl   String?
+  notes      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  owners      PetOwner[]
+  appointments Appointment[]
+
+  @@map("pets")
+}
+
+model PetOwner {
+  petId        String
+  ownerId      String
+  isPrimary    Boolean @default(false)
+  relationship String?
+
+  pet   Pet   @relation(fields: [petId], references: [id], onDelete: Cascade)
+  owner Owner @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@id([petId, ownerId])
+  @@map("pet_owners")
+}
+
+model ServiceCatalog {
+  id                 String     @id @default(cuid())
+  name               String
+  description        String?
+  durationMin        Int        @default(60)
+  pricingModel       PriceType  @default(fixed)
+  priceToy           Decimal?   @db.Decimal(10, 2)
+  pricePequeno       Decimal?   @db.Decimal(10, 2)
+  priceMediano       Decimal?   @db.Decimal(10, 2)
+  priceGrandeFixed   Decimal?   @db.Decimal(10, 2)
+  priceGrandeHourly  Decimal?   @db.Decimal(10, 2)
+  priceGiganteHourly Decimal?   @db.Decimal(10, 2)
+  isActive           Boolean    @default(true)
+  sortOrder          Int        @default(0)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  appointments Appointment[]
+
+  @@map("service_catalog")
+}
+
+model Appointment {
+  id                String            @id @default(cuid())
+  status            AppointmentStatus @default(pending)
+  startDateTime     DateTime
+  endDateTime       DateTime
+  priceType         PriceType         @default(fixed)
+  estimatedHours    Decimal?          @db.Decimal(4, 1)
+  actualHours       Decimal?          @db.Decimal(4, 1)
+  totalAmount       Decimal?          @db.Decimal(10, 2)
+  notes             String?
+  source            OwnerSource       @default(presencial)
+  bookingToken      String?           @unique
+  googleEventId     String?
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
+  reminder2dSent    Boolean           @default(false)
+  reminder1dSent    Boolean           @default(false)
+  reminder2hSent    Boolean           @default(false)
+  reviewSent        Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  ownerId   String
+  petId     String
+  serviceId String
+  staffId   String
+
+  owner   Owner          @relation(fields: [ownerId], references: [id])
+  pet     Pet            @relation(fields: [petId], references: [id])
+  service ServiceCatalog @relation(fields: [serviceId], references: [id])
+  staff   User           @relation("StaffAppointments", fields: [staffId], references: [id])
+  ticket  Ticket?
+
+  @@index([staffId, startDateTime])
+  @@index([ownerId])
+  @@index([petId])
+  @@index([startDateTime])
+  @@index([status])
+  @@map("appointments")
+}
+
+model AppointmentPipelineStep {
+  id            String   @id @default(cuid())
+  step          String
+  label         String
+  sortOrder     Int
+  completedAt   DateTime?
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, step])
+  @@map("appointment_pipeline_steps")
+}
+
+model Ticket {
+  id            String        @id @default(cuid())
+  number        String        @unique
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(pending)
+  createdAt     DateTime      @default(now())
+
+  appointmentId String    @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  invoice       Invoice?
+  refunds       Refund[]
+
+  @@map("tickets")
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  companyName String
+  cif         String
+  address     String?
+  subtotal    Decimal  @db.Decimal(10, 2)
+  ivaRate     Decimal  @db.Decimal(4, 2) @default(21.00)
+  ivaAmount   Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  ticketId String @unique
+  ticket   Ticket  @relation(fields: [ticketId], references: [id])
+
+  @@map("invoices")
+}
+
+model Refund {
+  id            String        @id @default(cuid())
+  amount        Decimal       @db.Decimal(10, 2)
+  reason        String
+  refundMethod  PaymentMethod
+  isPartial     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  @@map("refunds")
+}
+
+model ProductSale {
+  id            String        @id @default(cuid())
+  productName   String
+  quantity      Int           @default(1)
+  unitPrice     Decimal       @db.Decimal(10, 2)
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  createdAt     DateTime      @default(now())
+
+  ownerId String
+  owner   Owner @relation(fields: [ownerId], references: [id])
+
+  @@map("product_sales")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  type      NotificationType
+  channel   NotificationChannel
+  recipient String
+  title     String?
+  body      String
+  status    NotificationStatus @default(pending)
+  sentAt    DateTime?
+  metadata  Json?
+  createdAt DateTime           @default(now())
+
+  ownerId  String
+  owner    Owner  @relation(fields: [ownerId], references: [id])
+  ticketId String?
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationConfig {
+  id        String             @id @default(cuid())
+  type      NotificationType
+  channel   NotificationChannel
+  enabled   Boolean            @default(true)
+  ownerId   String?
+  owner     Owner?             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([type, channel, ownerId])
+  @@map("notification_configs")
+}
+
+model ConsentRecord {
+  id        String   @id @default(cuid())
+  type      String
+  version   String
+  accepted  Boolean
+  textShown String
+  ipAddress String?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  ownerId String
+  owner   Owner @relation(fields: [ownerId], references: [id])
+
+  @@map("consent_records")
+}
+
+model DataDeletionRequest {
+  id          String   @id @default(cuid())
+  requestType String
+  description String?
+  status      String   @default("pending")
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  ownerId String
+  owner   Owner @relation(fields: [ownerId], references: [id])
+
+  @@map("data_deletion_requests")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  userId String?
+  user   User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model GoogleCalendarToken {
+  id           String   @id @default(cuid())
+  accessToken  String
+  refreshToken String
+  expiryDate   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("google_calendar_tokens")
+}

@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.env.local
+.env.production
+.env
+*.tsbuildinfo
+next-env.d.ts
+prisma/migrations/
+coverage/
+test-results/
+playwright-report/
