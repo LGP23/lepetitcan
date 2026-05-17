@@ -245,6 +245,7 @@ model Appointment {
   googleEventId     String?
   confirmedAt       DateTime?
   cancelledAt       DateTime?
+  completedAt       DateTime?
   cancellationReason String?
   reminder2dSent    Boolean           @default(false)
   reminder1dSent    Boolean           @default(false)

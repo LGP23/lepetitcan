@@ -70,6 +70,7 @@ export async function completeAppointment(appointmentId: string) {
       where: { id: appointmentId },
       data: {
         status: 'completed',
+        completedAt: new Date(),
         totalAmount: priceResult.price,
         actualHours: priceResult.totalHours ? priceResult.totalHours : appointment.actualHours,
       },
