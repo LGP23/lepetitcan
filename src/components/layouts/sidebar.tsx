@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils/cn'
 import {
   LayoutDashboard, Users, PawPrint, Scissors, Calendar, CalendarCheck,
   Receipt, FileText, Package, Bell, UsersRound, Settings, Shield,
-  ChevronLeft, LogOut, Menu,
+  ChevronLeft, LogOut, Menu, RotateCcw, ClipboardList,
 } from 'lucide-react'
 import { useState } from 'react'
 import { signOut } from 'next-auth/react'
@@ -18,7 +18,9 @@ const menuItems = [
   { href: '/servicios', label: 'Servicios', icon: Scissors },
   { href: '/calendario', label: 'Calendario', icon: Calendar },
   { href: '/citas', label: 'Citas', icon: CalendarCheck },
-  { href: '/tickets', label: 'Tickets', icon: Receipt },
+  { href: '/tickets', label: 'TPV / Tickets', icon: Receipt },
+  { href: '/tickets/albaranes', label: 'Albaranes', icon: ClipboardList },
+  { href: '/tickets/devoluciones', label: 'Devoluciones', icon: RotateCcw },
   { href: '/facturas', label: 'Facturas', icon: FileText },
   { href: '/productos', label: 'Productos', icon: Package },
   { href: '/notificaciones', label: 'Notificaciones', icon: Bell },
