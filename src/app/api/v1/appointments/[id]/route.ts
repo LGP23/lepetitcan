@@ -64,7 +64,7 @@ export async function PATCH(
       entityType: 'appointment',
       entityId: appointment.id,
       userId: session.user.id,
-      details: { changes: Object.keys(body) },
+      details: JSON.stringify({ changes: Object.keys(body) }),
     },
   })
 

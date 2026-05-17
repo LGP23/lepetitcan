@@ -64,7 +64,7 @@ export async function POST(request: Request) {
         entityType: 'refund',
         entityId: refund.id,
         userId: session.user.id,
-        details: { ticketId: data.ticketId, amount: data.amount, reason: data.reason },
+        details: JSON.stringify({ ticketId: data.ticketId, amount: data.amount, reason: data.reason }),
       },
     })
 

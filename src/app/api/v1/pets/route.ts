@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         entityType: 'pet',
         entityId: pet.id,
         userId: session.user.id,
-        details: { name: pet.name, size: pet.size },
+        details: JSON.stringify({ name: pet.name, size: pet.size }),
       },
     })
 

@@ -37,7 +37,7 @@ async function main() {
           title: '¡Feliz cumpleaños! 🎂',
           body: `¡Feliz cumpleaños ${pet.name}! 🐾🎉 Esperamos verte pronto en Le Petit Can.`,
           status: 'pending',
-          metadata: { petName: pet.name, petId: pet.id },
+          metadata: JSON.stringify({ petName: pet.name, petId: pet.id }),
         },
       })
     }

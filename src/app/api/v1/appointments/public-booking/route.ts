@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         title: 'Solicitud de cita recibida',
         body: `Hola ${owner.name}, hemos recibido tu solicitud de cita para ${pet.name}. Te confirmaremos pronto. 🐾`,
         status: 'pending',
-        metadata: { appointmentId: appointment.id, petName: pet.name },
+        metadata: JSON.stringify({ appointmentId: appointment.id, petName: pet.name }),
       },
     })
 

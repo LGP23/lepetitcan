@@ -27,7 +27,7 @@ async function main() {
           title: 'Faltan 2 días',
           body: `Faltan 2 días para la cita de ${apt.pet.name} (${apt.startDateTime.toLocaleDateString('es-ES')}).`,
           status: 'pending',
-          metadata: { appointmentId: apt.id, petName: apt.pet.name },
+          metadata: JSON.stringify({ appointmentId: apt.id, petName: apt.pet.name }),
         },
       })
       await prisma.appointment.update({ where: { id: apt.id }, data: { reminder2dSent: true } })
@@ -44,7 +44,7 @@ async function main() {
           title: 'Falta 1 día',
           body: `Mañana es la cita de ${apt.pet.name} a las ${apt.startDateTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}.`,
           status: 'pending',
-          metadata: { appointmentId: apt.id, petName: apt.pet.name },
+          metadata: JSON.stringify({ appointmentId: apt.id, petName: apt.pet.name }),
         },
       })
       await prisma.appointment.update({ where: { id: apt.id }, data: { reminder1dSent: true } })
@@ -61,7 +61,7 @@ async function main() {
           title: '¡En 2 horas!',
           body: `${apt.pet.name} te espera en 2 horas.`,
           status: 'pending',
-          metadata: { appointmentId: apt.id, petName: apt.pet.name },
+          metadata: JSON.stringify({ appointmentId: apt.id, petName: apt.pet.name }),
         },
       })
       await prisma.appointment.update({ where: { id: apt.id }, data: { reminder2hSent: true } })

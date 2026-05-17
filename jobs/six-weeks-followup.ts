@@ -30,7 +30,7 @@ async function main() {
         title: '¿Volvemos a vernos?',
         body: `Hace 6 semanas ${apt.pet.name} visitó Le Petit Can. ¿Quieres reservar su próxima cita?`,
         status: 'pending',
-        metadata: { appointmentId: apt.id, petName: apt.pet.name },
+        metadata: JSON.stringify({ appointmentId: apt.id, petName: apt.pet.name }),
       },
     })
   }

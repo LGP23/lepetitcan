@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         entityType: 'owner',
         entityId: client.id,
         userId: session.user.id,
-        details: { name: client.name },
+        details: JSON.stringify({ name: client.name }),
       },
     })
 

@@ -86,7 +86,7 @@ export async function sendNotification(input: SendNotificationInput) {
       title: template.title,
       body: template.body,
       status: 'pending',
-      metadata: metadata || {},
+      metadata: metadata ? JSON.stringify(metadata) : null,
     },
   })
 

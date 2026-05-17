@@ -72,7 +72,7 @@ export async function PUT(
         entityType: 'owner',
         entityId: client.id,
         userId: session.user.id,
-        details: { updates: Object.keys(body) },
+        details: JSON.stringify({ updates: Object.keys(body) }),
       },
     })
 

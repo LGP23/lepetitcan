@@ -101,11 +101,11 @@ export async function POST(request: Request) {
         entityType: 'appointment',
         entityId: appointment.id,
         userId: session.user.id,
-        details: {
+        details: JSON.stringify({
           petId: data.petId,
           serviceId: data.serviceId,
           startDateTime: data.startDateTime,
-        },
+        }),
       },
     })
 
