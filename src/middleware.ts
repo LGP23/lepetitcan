@@ -1,21 +1,22 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+import { NextRequest, NextResponse } from 'next/server'
 
 const staffRoutes = ['/dashboard', '/clientes', '/mascotas', '/servicios', '/calendario', '/citas', '/tickets', '/facturas', '/productos', '/notificaciones', '/equipo', '/configuracion', '/auditoria']
 const clientRoutes = ['/mis-datos', '/mis-mascotas', '/citas', '/historial', '/facturas', '/notificaciones']
 const authRoutes = ['/login', '/register', '/recuperar-password']
 
-export default auth((req) => {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const isLoggedIn = !!req.auth
-  const role = req.auth?.user?.role
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET })
+  const isLoggedIn = !!token
+  const role = token?.role as string | undefined
 
   if (authRoutes.some((r) => pathname.startsWith(r))) {
     if (isLoggedIn) {
       if (role === 'admin' || role === 'peluquero') {
         return NextResponse.redirect(new URL('/dashboard', req.url))
       }
-      return NextResponse.redirect(new URL('/mis-citas', req.url))
+      return NextResponse.redirect(new URL('/citas', req.url))
     }
     return NextResponse.next()
   }
@@ -30,7 +31,7 @@ export default auth((req) => {
   }
 
   if (isStaffRoute && role === 'cliente') {
-    return NextResponse.redirect(new URL('/mis-citas', req.url))
+    return NextResponse.redirect(new URL('/citas', req.url))
   }
 
   if (isClientRoute && (role === 'admin' || role === 'peluquero')) {
@@ -38,7 +39,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons|.*\\.png$).*)'],
