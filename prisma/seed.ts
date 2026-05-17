@@ -1,4 +1,4 @@
-import { PrismaClient, Role, PetSize, PriceType, OwnerSource, PaymentMethod } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -13,13 +13,13 @@ async function main() {
       email: 'admin@lepetitcan.es',
       passwordHash,
       name: 'Iliana Ortega',
-      role: 'admin' as Role,
+      role: 'admin',
       owner: {
         create: {
           name: 'Iliana Ortega',
           email: 'iliana@lepetitcan.es',
           phone: '+34698130777',
-          source: 'presencial' as OwnerSource,
+          source: 'presencial',
         },
       },
     },
@@ -32,7 +32,7 @@ async function main() {
       email: 'staff@lepetitcan.es',
       passwordHash,
       name: 'Staff Le Petit Can',
-      role: 'peluquero' as Role,
+      role: 'peluquero' ,
     },
   })
 
@@ -41,7 +41,7 @@ async function main() {
       name: 'Corte de Pelo',
       description: 'Corte personalizado para cada raza y estilo',
       durationMin: 60,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: 30,
       pricePequeno: 35,
       priceMediano: 40,
@@ -54,7 +54,7 @@ async function main() {
       name: 'Baño Completo',
       description: 'Baño con productos hipoalergénicos, champú nutritivo y acondicionador',
       durationMin: 45,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: 20,
       pricePequeno: 25,
       priceMediano: 30,
@@ -67,7 +67,7 @@ async function main() {
       name: 'Desenredado y Deslanado',
       description: 'Eliminación de nudos y enredos con herramientas especializadas',
       durationMin: 90,
-      pricingModel: 'hourly' as PriceType,
+      pricingModel: 'hourly' ,
       priceToy: null,
       pricePequeno: null,
       priceMediano: null,
@@ -80,7 +80,7 @@ async function main() {
       name: 'Corte de Uñas',
       description: 'Mantenimiento de uñas con instrumentos profesionales',
       durationMin: 15,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: 10,
       pricePequeno: 12,
       priceMediano: 12,
@@ -93,7 +93,7 @@ async function main() {
       name: 'Limpieza de Oídos',
       description: 'Limpieza profunda con productos específicos no irritantes',
       durationMin: 15,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: 10,
       pricePequeno: 10,
       priceMediano: 12,
@@ -106,7 +106,7 @@ async function main() {
       name: 'Cepillado Dental',
       description: 'Higiene bucal para prevención de sarro y enfermedades',
       durationMin: 15,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: 10,
       pricePequeno: 12,
       priceMediano: 12,
@@ -119,7 +119,7 @@ async function main() {
       name: 'Baño Spa & Arreglo',
       description: 'Experiencia spa completa con productos premium',
       durationMin: 120,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: 45,
       pricePequeno: 50,
       priceMediano: 60,
@@ -132,7 +132,7 @@ async function main() {
       name: 'Stripping Terriers',
       description: 'Técnica de stripping para terriers',
       durationMin: 120,
-      pricingModel: 'fixed' as PriceType,
+      pricingModel: 'fixed' ,
       priceToy: null,
       pricePequeno: null,
       priceMediano: 55,

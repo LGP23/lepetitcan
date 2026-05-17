@@ -3,88 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  admin
-  peluquero
-  cliente
-}
-
-enum PetSize {
-  toy
-  pequeno
-  mediano
-  grande
-  gigante
-}
-
-enum AppointmentStatus {
-  pending
-  confirmed
-  in_progress
-  completed
-  cancelled
-}
-
-enum PriceType {
-  fixed
-  hourly
-}
-
-enum OwnerSource {
-  web
-  whatsapp
-  instagram
-  facebook
-  sms
-  phone
-  presencial
-  ai_agent
-}
-
-enum NotificationChannel {
-  whatsapp
-  email
-  sms
-  instagram
-  facebook
-}
-
-enum NotificationType {
-  appointment_confirmation
-  appointment_reminder
-  appointment_cancellation
-  appointment_modification
-  pickup_reminder
-  two_days_before
-  one_day_before
-  two_hours_before
-  six_weeks_followup
-  birthday
-  review_request
-  custom
-}
-
-enum NotificationStatus {
-  pending
-  sent
-  failed
-}
-
-enum PaymentMethod {
-  cash
-  card
-  bizum
-}
-
-enum PaymentStatus {
-  pending
-  paid
-  refunded
-}
+// SQLite does not support enums, using String instead
 
 model Account {
   id                String  @id @default(cuid())
@@ -92,12 +15,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?   // text
+  access_token      String?   // text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?   // text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -131,7 +54,7 @@ model User {
   passwordHash      String?
   name              String
   image             String?
-  role              Role      @default(cliente)
+  role              String    @default("cliente")
   twoFactorEnabled  Boolean   @default(false)
   twoFactorSecret   String?
   isActive          Boolean   @default(true)
@@ -157,8 +80,8 @@ model Owner {
   phone               String?
   address             String?
   notes               String?
-  source              OwnerSource        @default(presencial)
-  prefChannel         NotificationChannel @default(whatsapp)
+  source              String             @default("presencial")
+  prefChannel         String             @default("whatsapp")
   marketingConsent    Boolean            @default(false)
   marketingConsentAt  DateTime?
   dataRetentionUntil  DateTime?
@@ -181,7 +104,7 @@ model Pet {
   id         String   @id @default(cuid())
   name       String
   breed      String?
-  size       PetSize
+  size       String
   birthDate  DateTime?
   photoUrl   String?
   notes      String?
@@ -209,17 +132,17 @@ model PetOwner {
 }
 
 model ServiceCatalog {
-  id                 String     @id @default(cuid())
+  id                 String     @id
   name               String
   description        String?
   durationMin        Int        @default(60)
-  pricingModel       PriceType  @default(fixed)
-  priceToy           Decimal?   @db.Decimal(10, 2)
-  pricePequeno       Decimal?   @db.Decimal(10, 2)
-  priceMediano       Decimal?   @db.Decimal(10, 2)
-  priceGrandeFixed   Decimal?   @db.Decimal(10, 2)
-  priceGrandeHourly  Decimal?   @db.Decimal(10, 2)
-  priceGiganteHourly Decimal?   @db.Decimal(10, 2)
+  pricingModel       String     @default("fixed")
+  priceToy           Float?
+  pricePequeno       Float?
+  priceMediano       Float?
+  priceGrandeFixed   Float?
+  priceGrandeHourly  Float?
+  priceGiganteHourly Float?
   isActive           Boolean    @default(true)
   sortOrder          Int        @default(0)
   createdAt          DateTime   @default(now())
@@ -232,15 +155,15 @@ model ServiceCatalog {
 
 model Appointment {
   id                String            @id @default(cuid())
-  status            AppointmentStatus @default(pending)
+  status            String   @default("pending")
   startDateTime     DateTime
   endDateTime       DateTime
-  priceType         PriceType         @default(fixed)
-  estimatedHours    Decimal?          @db.Decimal(4, 1)
-  actualHours       Decimal?          @db.Decimal(4, 1)
+  priceType         String   @default("fixed")
+  estimatedHours    Float?
+  actualHours       Float?
   totalAmount       Decimal?          @db.Decimal(10, 2)
   notes             String?
-  source            OwnerSource       @default(presencial)
+  source            String   @default("presencial")
   bookingToken      String?           @unique
   googleEventId     String?
   confirmedAt       DateTime?
@@ -290,9 +213,9 @@ model AppointmentPipelineStep {
 model Ticket {
   id            String        @id @default(cuid())
   number        String        @unique
-  totalAmount   Decimal       @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
-  paymentStatus PaymentStatus @default(pending)
+  totalAmount   Float
+  paymentMethod String
+  paymentStatus String       @default("pending")
   createdAt     DateTime      @default(now())
 
   appointmentId String    @unique
@@ -309,10 +232,10 @@ model Invoice {
   companyName String
   cif         String
   address     String?
-  subtotal    Decimal  @db.Decimal(10, 2)
-  ivaRate     Decimal  @db.Decimal(4, 2) @default(21.00)
-  ivaAmount   Decimal  @db.Decimal(10, 2)
-  total       Decimal  @db.Decimal(10, 2)
+  subtotal    Float
+  ivaRate     Float    @default(21.00)
+  ivaAmount   Float
+  total       Float
   createdAt   DateTime @default(now())
 
   ticketId String @unique
@@ -323,9 +246,9 @@ model Invoice {
 
 model Refund {
   id            String        @id @default(cuid())
-  amount        Decimal       @db.Decimal(10, 2)
+  amount        Float
   reason        String
-  refundMethod  PaymentMethod
+  refundMethod  String
   isPartial     Boolean       @default(false)
   createdAt     DateTime      @default(now())
 
@@ -339,9 +262,9 @@ model ProductSale {
   id            String        @id @default(cuid())
   productName   String
   quantity      Int           @default(1)
-  unitPrice     Decimal       @db.Decimal(10, 2)
-  totalAmount   Decimal       @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
+  unitPrice     Float
+  totalAmount   Float
+  paymentMethod String
   createdAt     DateTime      @default(now())
 
   ownerId String
@@ -351,10 +274,10 @@ model ProductSale {
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String   @id
   name        String
   description String?
-  price       Decimal  @db.Decimal(10, 2)
+  price       Float
   category    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -365,12 +288,12 @@ model Product {
 
 model Notification {
   id        String             @id @default(cuid())
-  type      NotificationType
-  channel   NotificationChannel
+  type      String
+  channel   String
   recipient String
   title     String?
   body      String
-  status    NotificationStatus @default(pending)
+  status    String             @default("pending")
   sentAt    DateTime?
   metadata  Json?
   createdAt DateTime           @default(now())
@@ -386,8 +309,8 @@ model Notification {
 
 model NotificationConfig {
   id        String             @id @default(cuid())
-  type      NotificationType
-  channel   NotificationChannel
+  type      String
+  channel   String
   enabled   Boolean            @default(true)
   ownerId   String?
   owner     Owner?             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
