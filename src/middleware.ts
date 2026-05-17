@@ -1,22 +1,17 @@
-import { getToken } from 'next-auth/jwt'
 import { NextRequest, NextResponse } from 'next/server'
 
 const staffRoutes = ['/dashboard', '/clientes', '/mascotas', '/servicios', '/calendario', '/citas', '/tickets', '/facturas', '/productos', '/notificaciones', '/equipo', '/configuracion', '/auditoria']
 const clientRoutes = ['/mis-datos', '/mis-mascotas', '/citas', '/historial', '/facturas', '/notificaciones']
 const authRoutes = ['/login', '/register', '/recuperar-password']
 
-export async function middleware(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET })
+  const token = req.cookies.get('next-auth.session-token')?.value
   const isLoggedIn = !!token
-  const role = token?.role as string | undefined
 
   if (authRoutes.some((r) => pathname.startsWith(r))) {
     if (isLoggedIn) {
-      if (role === 'admin' || role === 'peluquero') {
-        return NextResponse.redirect(new URL('/dashboard', req.url))
-      }
-      return NextResponse.redirect(new URL('/citas', req.url))
+      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
     return NextResponse.next()
   }
@@ -28,14 +23,6 @@ export async function middleware(req: NextRequest) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
-  }
-
-  if (isStaffRoute && role === 'cliente') {
-    return NextResponse.redirect(new URL('/citas', req.url))
-  }
-
-  if (isClientRoute && (role === 'admin' || role === 'peluquero')) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
   return NextResponse.next()
