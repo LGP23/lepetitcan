@@ -139,7 +139,8 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  owner             Owner?
+  owner             Owner?     @relation(fields: [ownerId], references: [id])
+  ownerId           String?    @unique
   accounts          Account[]
   sessions          Session[]
   staffAppointments Appointment[] @relation("StaffAppointments")
@@ -164,13 +165,14 @@ model Owner {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
-  user                User?
-  pets                PetOwner[]
-  appointments        Appointment[]
-  productSales        ProductSale[]
-  notifications       Notification[]
-  consentRecords      ConsentRecord[]
-  dataDeletionRequests DataDeletionRequest[]
+  user                  User?
+  pets                  PetOwner[]
+  appointments          Appointment[]
+  productSales          ProductSale[]
+  notifications         Notification[]
+  notificationConfigs   NotificationConfig[]
+  consentRecords        ConsentRecord[]
+  dataDeletionRequests  DataDeletionRequest[]
 
   @@map("owners")
 }
@@ -260,7 +262,8 @@ model Appointment {
   pet     Pet            @relation(fields: [petId], references: [id])
   service ServiceCatalog @relation(fields: [serviceId], references: [id])
   staff   User           @relation("StaffAppointments", fields: [staffId], references: [id])
-  ticket  Ticket?
+  ticket        Ticket?
+  pipelineSteps AppointmentPipelineStep[]
 
   @@index([staffId, startDateTime])
   @@index([ownerId])
