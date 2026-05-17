@@ -1,5 +1,6 @@
 import { Sidebar } from '@/components/layouts/sidebar'
 import { TopBar } from '@/components/layouts/top-bar'
+import { ChatWidget } from '@/components/chat/chat-widget'
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           {children}
         </main>
       </div>
+      <ChatWidget />
     </div>
   )
 }
