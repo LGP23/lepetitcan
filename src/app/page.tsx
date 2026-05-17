@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
@@ -22,6 +22,14 @@ export default function HomePage() {
       router.push('/citas')
     }
   }, [session, status, router])
+
+  // Timeout: if session doesn't load in 3s, redirect to login
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push('/login')
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-rose-50">
