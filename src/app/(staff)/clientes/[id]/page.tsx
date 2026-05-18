@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getClienteById } from '@/actions/clientes'
 import { formatCurrency } from '@/lib/utils/pricing'
+import { DeleteClientButton } from '@/components/clients/delete-client-button'
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const client = await getClienteById(params.id)
@@ -166,6 +167,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           </div>
         </div>
       </div>
+
+      <DeleteClientButton clientId={client.id} clientName={client.name} />
     </div>
   )
 }

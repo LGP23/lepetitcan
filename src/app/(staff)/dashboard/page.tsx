@@ -1,39 +1,112 @@
-'use client'
-
-import { useSession } from 'next-auth/react'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { startOfDay, endOfDay } from 'date-fns'
 import { CalendarDays, Clock, Dog, Euro, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { formatCurrency } from '@/lib/utils/pricing'
+import { formatTime } from '@/lib/utils/dates'
 
-const stats = [
-  { label: 'Citas hoy', value: '4', icon: CalendarDays, color: 'bg-blue-50 text-blue-600' },
-  { label: 'En curso', value: '2', icon: Clock, color: 'bg-purple-50 text-purple-600' },
-  { label: 'Pendientes recoger', value: '1', icon: Dog, color: 'bg-amber-50 text-amber-600' },
-  { label: 'Ingresos hoy', value: '145€', icon: Euro, color: 'bg-green-50 text-green-600' },
+export const dynamic = 'force-dynamic'
+
+async function getDashboardData() {
+  const now = new Date()
+  const todayStart = startOfDay(now)
+  const todayEnd = endOfDay(now)
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      startDateTime: { gte: todayStart, lte: todayEnd },
+      status: { notIn: ['cancelled'] },
+    },
+    include: {
+      pet: { select: { name: true } },
+      owner: { select: { name: true } },
+      service: { select: { name: true } },
+    },
+    orderBy: { startDateTime: 'asc' },
+  })
+
+  const confirmed = appointments.filter(a => a.status === 'confirmed').length
+  const inProgress = appointments.filter(a => a.status === 'in_progress').length
+  const pending = appointments.filter(a => a.status === 'pending').length
+  const completed = appointments.filter(a => a.status === 'completed').length
+
+  const tickets = await prisma.ticket.findMany({
+    where: {
+      appointment: { completedAt: { gte: todayStart, lte: todayEnd } },
+      paymentStatus: { notIn: ['refunded'] },
+    },
+  })
+
+  const revenue = tickets.reduce((sum, t) => sum + Number(t.totalAmount), 0)
+
+  const inProgressAppt = appointments.find(a => a.status === 'in_progress')
+
+  return {
+    appointments,
+    stats: { total: appointments.length, confirmed, inProgress, pending, completed },
+    revenue,
+    inProgressPet: inProgressAppt
+      ? `${inProgressAppt.pet.name} - ${inProgressAppt.service.name}`
+      : null,
+  }
+}
+
+const statusStyles: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-700',
+  confirmed: 'bg-blue-50 text-blue-700',
+  in_progress: 'bg-purple-50 text-purple-700',
+  completed: 'bg-green-50 text-green-700',
+}
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pendiente',
+  confirmed: 'Confirmada',
+  in_progress: 'En curso',
+  completed: 'Completada',
+}
+
+const pipelineConfig = [
+  { status: 'pending', label: 'Pendientes de llegar', desc: 'mascotas pendientes', bg: 'bg-amber-50', iconBg: 'bg-amber-200', icon: '⏳', textColor: 'text-amber-700' },
+  { status: 'confirmed', label: 'Confirmadas', desc: 'citas confirmadas', bg: 'bg-blue-50', iconBg: 'bg-blue-200', icon: '✅', textColor: 'text-blue-700' },
+  { status: 'in_progress', label: 'En curso', desc: null, bg: 'bg-purple-50', iconBg: 'bg-purple-200', icon: '🔧', textColor: 'text-purple-700' },
+  { status: 'completed', label: 'Listas para recoger', desc: 'mascota lista', bg: 'bg-green-50', iconBg: 'bg-green-200', icon: '🏁', textColor: 'text-green-700' },
 ]
 
-const todayAppointments = [
-  { time: '09:30', pet: 'Lucas', service: 'Corte de pelo', owner: 'Pedro López', status: 'confirmed' },
-  { time: '10:45', pet: 'Luna', service: 'Baño completo', owner: 'Ana García', status: 'in_progress' },
-  { time: '12:00', pet: 'Thor', service: 'Desenredado', owner: 'María Ruiz', status: 'confirmed' },
-  { time: '13:30', pet: 'Kira', service: 'Corte + Uñas', owner: 'Ana García', status: 'pending' },
-]
+export default async function DashboardPage() {
+  const session = await auth()
+  const data = await getDashboardData()
+  const userName = session?.user?.name?.split(' ')[0] || 'admin'
 
-export default function DashboardPage() {
-  const { data: session } = useSession()
+  const todayString = new Date().toLocaleDateString('es-ES', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  })
+
+  const statsCards = [
+    { label: 'Citas hoy', value: data.stats.total, icon: CalendarDays, color: 'bg-blue-50 text-blue-600' },
+    { label: 'En curso', value: data.stats.inProgress, icon: Clock, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Pendientes recoger', value: data.stats.completed, icon: Dog, color: 'bg-amber-50 text-amber-600' },
+    { label: 'Ingresos hoy', value: formatCurrency(data.revenue), icon: Euro, color: 'bg-green-50 text-green-600' },
+  ]
+
+  const pipelineCounts: Record<string, number> = {
+    pending: data.stats.pending,
+    confirmed: data.stats.confirmed,
+    in_progress: data.stats.inProgress,
+    completed: data.stats.completed,
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">
-          Buenas, {session?.user?.name?.split(' ')[0] || 'admin'}
+          Buenas, {userName}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{todayString}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
+        {statsCards.map((stat) => {
           const Icon = stat.icon
           return (
             <div key={stat.label} className="bg-white rounded-2xl border p-5 hover:shadow-sm transition-shadow">
@@ -60,23 +133,21 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {todayAppointments.map((apt) => (
+            {data.appointments.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">No hay citas para hoy</p>
+            )}
+            {data.appointments.map((apt) => (
               <div
-                key={apt.time}
+                key={apt.id}
                 className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors"
               >
-                <div className="text-sm font-medium text-gray-500 w-12">{apt.time}</div>
+                <div className="text-sm font-medium text-gray-500 w-12">{formatTime(apt.startDateTime)}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{apt.pet}</p>
-                  <p className="text-xs text-muted-foreground truncate">{apt.service} · {apt.owner}</p>
+                  <p className="text-sm font-medium text-gray-900">{apt.pet.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{apt.service.name} · {apt.owner.name}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  apt.status === 'confirmed' ? 'bg-blue-50 text-blue-700' :
-                  apt.status === 'in_progress' ? 'bg-purple-50 text-purple-700' :
-                  'bg-amber-50 text-amber-700'
-                }`}>
-                  {apt.status === 'confirmed' ? 'Confirmada' :
-                   apt.status === 'in_progress' ? 'En curso' : 'Pendiente'}
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusStyles[apt.status] || ''}`}>
+                  {statusLabels[apt.status] || apt.status}
                 </span>
               </div>
             ))}
@@ -92,41 +163,22 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
-              <div className="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-sm">⏳</div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Pendientes de llegar</p>
-                <p className="text-xs text-muted-foreground">2 mascotas</p>
-              </div>
-              <span className="text-xs font-medium text-amber-700">2</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
-              <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center text-sm">✅</div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Confirmadas</p>
-                <p className="text-xs text-muted-foreground">3 citas confirmadas</p>
-              </div>
-              <span className="text-xs font-medium text-blue-700">3</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
-              <div className="w-8 h-8 bg-purple-200 rounded-full flex items-center justify-center text-sm">🔧</div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">En curso</p>
-                <p className="text-xs text-muted-foreground">Luna - Baño</p>
-              </div>
-              <span className="text-xs font-medium text-purple-700">1</span>
-            </div>
-
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
-              <div className="w-8 h-8 bg-green-200 rounded-full flex items-center justify-center text-sm">🏁</div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Listas para recoger</p>
-                <p className="text-xs text-muted-foreground">1 mascota lista</p>
-              </div>
-              <span className="text-xs font-medium text-green-700">1</span>
-            </div>
+            {pipelineConfig.map((item) => {
+              const count = pipelineCounts[item.status] || 0
+              const desc = item.status === 'in_progress' && data.inProgressPet
+                ? data.inProgressPet
+                : `${count} ${item.desc || ''}`
+              return (
+                <div key={item.status} className={`flex items-center gap-3 p-3 ${item.bg} rounded-xl`}>
+                  <div className={`w-8 h-8 ${item.iconBg} rounded-full flex items-center justify-center text-sm`}>{item.icon}</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </div>
+                  <span className={`text-xs font-medium ${item.textColor}`}>{count}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
