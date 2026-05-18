@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
@@ -11,6 +11,7 @@ const createClientSchema = z.object({
   source: z.enum(['web', 'whatsapp', 'instagram', 'facebook', 'sms', 'phone', 'presencial', 'ai_agent']).default('presencial'),
   prefChannel: z.enum(['whatsapp', 'email', 'sms', 'instagram', 'facebook']).default('whatsapp'),
   notes: z.string().optional(),
+  marketingConsent: z.boolean().optional().default(false),
 })
 
 export async function GET(request: Request) {
@@ -82,6 +83,8 @@ export async function POST(request: Request) {
         source: data.source,
         prefChannel: data.prefChannel,
         notes: data.notes || null,
+        marketingConsent: data.marketingConsent,
+        marketingConsentAt: data.marketingConsent ? new Date() : null,
       },
       include: { pets: { include: { pet: true } } },
     })

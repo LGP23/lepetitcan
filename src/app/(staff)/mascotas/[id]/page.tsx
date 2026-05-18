@@ -1,43 +1,30 @@
-'use client'
-
-import { useState } from 'react'
-import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Dog, Cake, Users, Scissors, Calendar, Camera, Edit3, Plus, Phone } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-
-const mockPet = {
-  id: '1',
-  name: 'Luna',
-  breed: 'Golden Retriever',
-  size: 'grande',
-  birthDate: '12/03/2020',
-  age: '6 años',
-  photoUrl: null,
-  notes: 'Piel sensible. Usar champú hipoalergénico. Se pone nerviosa con el secador.',
-  owners: [
-    { id: '1', name: 'Ana García', phone: '+34 698 13 07 77', isPrimary: true },
-    { id: '3', name: 'Pedro García', phone: '+34 611 22 33 44', isPrimary: false },
-  ],
-  appointments: [
-    { date: '10/06/2026', service: 'Baño completo', staff: 'Iliana', amount: '35.00€', status: 'completed' },
-    { date: '25/05/2026', service: 'Corte de pelo', staff: 'Iliana', amount: '45.00€', status: 'completed' },
-    { date: '12/05/2026', service: 'Corte de uñas', staff: 'Iliana', amount: '12.00€', status: 'completed' },
-    { date: '28/04/2026', service: 'Corte de pelo', staff: 'Iliana', amount: '45.00€', status: 'completed' },
-    { date: '15/04/2026', service: 'Baño completo', staff: 'Iliana', amount: '35.00€', status: 'completed' },
-  ],
-  totalVisits: 12,
-  lastVisit: '10/06/2026',
-}
+import { getMascotaById } from '@/actions/mascotas'
+import { formatCurrency } from '@/lib/utils/pricing'
 
 const sizeLabels: Record<string, string> = {
   toy: 'Toy', pequeno: 'Pequeño', mediano: 'Mediano', grande: 'Grande', gigante: 'Gigante',
 }
 
-export default function PetDetailPage() {
-  const params = useParams()
-  const pet = mockPet
+export default async function PetDetailPage({ params }: { params: { id: string } }) {
+  const pet = await getMascotaById(params.id)
+
+  if (!pet) {
+    return (
+      <div className="text-center py-12">
+        <h1 className="text-2xl font-semibold mb-2">Mascota no encontrada</h1>
+        <Link href="/mascotas" className="text-rose-500 hover:underline">Volver a mascotas</Link>
+      </div>
+    )
+  }
+
+  // Calculate age if birthDate is available
+  // Not available in current schema, we'll assume age is not calculated for now or we just don't show it if it doesn't exist
+  // We'll show mock age for now if we don't have birthdate in DB. 
+  // Let's use the DB fields we have.
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -50,21 +37,22 @@ export default function PetDetailPage() {
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center flex-shrink-0 relative">
               <Dog size={32} className="text-rose-500" />
-              {!pet.photoUrl && (
-                <button className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full shadow border flex items-center justify-center hover:bg-gray-50">
-                  <Camera size={12} className="text-gray-400" />
-                </button>
-              )}
+              <button className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full shadow border flex items-center justify-center hover:bg-gray-50">
+                <Camera size={12} className="text-gray-400" />
+              </button>
             </div>
             <div>
               <h1 className="text-xl font-semibold">{pet.name}</h1>
-              <p className="text-sm text-muted-foreground">{pet.breed}</p>
+              <p className="text-sm text-muted-foreground">{pet.breed || 'Sin raza especificada'}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="primary">{sizeLabels[pet.size]}</Badge>
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Cake size={12} /> {pet.birthDate} ({pet.age})
-                </span>
-                <span className="text-xs text-muted-foreground">Última visita: {pet.lastVisit}</span>
+                <Badge variant="default" className="bg-rose-100 text-rose-700 hover:bg-rose-200 border-rose-200">
+                  {sizeLabels[pet.size] || pet.size}
+                </Badge>
+                {pet.appointments.length > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    Última visita: {pet.appointments[0].startDateTime.toLocaleDateString('es-ES')}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -72,9 +60,11 @@ export default function PetDetailPage() {
             <Button variant="outline" size="sm">
               <Edit3 size={16} className="mr-1" /> Editar
             </Button>
-            <Button size="sm">
-              <Plus size={16} className="mr-1" /> Nueva cita
-            </Button>
+            <Link href={`/citas/nueva?petId=${pet.id}`}>
+              <Button size="sm">
+                <Plus size={16} className="mr-1" /> Nueva cita
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -86,7 +76,7 @@ export default function PetDetailPage() {
 
         <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
           <div className="text-center p-3 bg-gray-50 rounded-xl">
-            <p className="text-2xl font-semibold">{pet.totalVisits}</p>
+            <p className="text-2xl font-semibold">{pet.appointments.length}</p>
             <p className="text-xs text-muted-foreground">Visitas totales</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-xl">
@@ -94,7 +84,9 @@ export default function PetDetailPage() {
             <p className="text-xs text-muted-foreground">Dueños vinculados</p>
           </div>
           <div className="text-center p-3 bg-gray-50 rounded-xl">
-            <p className="text-2xl font-semibold text-rose-600">172.00€</p>
+            <p className="text-2xl font-semibold text-rose-600">
+              {formatCurrency(pet.appointments.reduce((acc, apt) => acc + (apt.totalAmount || 0), 0))}
+            </p>
             <p className="text-xs text-muted-foreground">Gasto total</p>
           </div>
         </div>
@@ -110,20 +102,20 @@ export default function PetDetailPage() {
           </Button>
         </div>
         <div className="space-y-2">
-          {pet.owners.map((owner) => (
-            <Link key={owner.id} href={`/clientes/${owner.id}`}
+          {pet.owners.map((ownerLink) => (
+            <Link key={ownerLink.owner.id} href={`/clientes/${ownerLink.owner.id}`}
               className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-rose-50 transition-colors"
             >
               <div className="w-8 h-8 bg-rose-100 rounded-full flex items-center justify-center text-xs font-medium text-rose-600">
-                {owner.name.charAt(0)}
+                {ownerLink.owner.name.charAt(0)}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium">
-                  {owner.name}
-                  {owner.isPrimary && <Badge variant="primary" className="ml-2 text-[10px]">Principal</Badge>}
+                  {ownerLink.owner.name}
+                  {ownerLink.isPrimary && <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px]">Principal</span>}
                 </p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Phone size={12} /> {owner.phone}
+                  <Phone size={12} /> {ownerLink.owner.phone}
                 </p>
               </div>
             </Link>
@@ -139,22 +131,31 @@ export default function PetDetailPage() {
           <span className="text-xs text-muted-foreground">{pet.appointments.length} visitas</span>
         </div>
         <div className="divide-y">
-          {pet.appointments.map((apt, i) => (
-            <div key={i} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
+          {pet.appointments.length === 0 ? (
+            <div className="p-5 text-center text-sm text-muted-foreground">
+              Sin historial de citas
+            </div>
+          ) : pet.appointments.map((apt) => (
+            <div key={apt.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50">
               <div className="flex items-center gap-3">
                 <div className="p-1.5 bg-gray-100 rounded-lg">
                   <Scissors size={14} className="text-gray-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{apt.service}</p>
-                  <p className="text-xs text-muted-foreground">{apt.date} · {apt.staff}</p>
+                  <p className="text-sm font-medium">{apt.service.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {apt.startDateTime.toLocaleDateString('es-ES')} · {apt.staff.name}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium">{apt.amount}</p>
-                <Badge variant={apt.status === 'completed' ? 'success' : 'warning'}>
-                  {apt.status === 'completed' ? 'Completada' : 'Pendiente'}
-                </Badge>
+                <p className="text-sm font-medium">{formatCurrency(apt.totalAmount || 0)}</p>
+                <span className={`text-[10px] px-2 py-1 rounded-full ${
+                  apt.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                  apt.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {apt.status === 'completed' ? 'Completada' : apt.status}
+                </span>
               </div>
             </div>
           ))}

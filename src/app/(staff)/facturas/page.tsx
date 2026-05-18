@@ -1,66 +1,121 @@
 'use client'
 
-import { FileText, Search, Download, Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { FileText, Search, Download, Plus, Receipt, Sparkles, Check, CreditCard, Banknote } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-
-const mockInvoices = [
-  { id: '1', number: 'F-2026-0001', client: 'Ana García', date: '10/06/2026', base: '82.00€', iva: '17.22€', total: '99.22€' },
-  { id: '2', number: 'F-2026-0002', client: 'Pedro López', date: '08/06/2026', base: '45.00€', iva: '9.45€', total: '54.45€' },
-  { id: '3', number: 'F-2026-0003', client: 'María Ruiz', date: '05/06/2026', base: '100.00€', iva: '21.00€', total: '121.00€' },
-]
+import { getTicketsAction } from '@/actions/facturacion'
+import { formatCurrency } from '@/lib/utils/pricing'
 
 export default function InvoicesPage() {
+  const [tickets, setTickets] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const loadTickets = async () => {
+    try {
+      setLoading(true)
+      const data = await getTicketsAction()
+      setTickets(data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadTickets()
+  }, [])
+
+  const filteredTickets = tickets.filter(t => 
+    t.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.petName.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const getPaymentIcon = (method: string) => {
+    if (method === 'cash') return <Banknote size={14} className="text-emerald-500 inline mr-1" />
+    if (method === 'card') return <CreditCard size={14} className="text-blue-500 inline mr-1" />
+    return <Receipt size={14} className="text-purple-500 inline mr-1" />
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto px-4 py-2">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Facturación</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gestiona tus facturas</p>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <Sparkles size={24} className="text-rose-400" />
+            Historial de Ventas y Facturas
+          </h1>
+          <p className="text-sm text-gray-500 font-medium mt-0.5">
+            Registro total de tickets y boletas emitidos por finalización de servicios.
+          </p>
         </div>
-        <button className="bg-rose-400 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors">
-          <Plus size={18} />
-          Nueva factura
-        </button>
       </div>
 
       <div className="relative">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input type="text" placeholder="Buscar factura..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300" />
+        <input 
+          type="text" 
+          placeholder="Buscar por Nº ticket, cliente o mascota..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-300 font-medium text-sm transition-all" 
+        />
       </div>
 
-      <div className="bg-white rounded-2xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Nº Factura</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Cliente</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Fecha</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500">Base</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500">IVA</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500">Total</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {mockInvoices.map((inv) => (
-              <tr key={inv.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{inv.number}</td>
-                <td className="px-4 py-3">{inv.client}</td>
-                <td className="px-4 py-3 text-muted-foreground">{inv.date}</td>
-                <td className="px-4 py-3 text-right">{inv.base}</td>
-                <td className="px-4 py-3 text-right">{inv.iva}</td>
-                <td className="px-4 py-3 text-right font-medium">{inv.total}</td>
-                <td className="px-4 py-3 text-right">
-                  <button className="p-1.5 hover:bg-gray-100 rounded-lg">
-                    <Download size={16} className="text-gray-400" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? (
+        <div className="space-y-2">
+          <div className="h-12 bg-gray-150 animate-pulse rounded-xl"></div>
+          <div className="h-12 bg-gray-150 animate-pulse rounded-xl"></div>
+          <div className="h-12 bg-gray-150 animate-pulse rounded-xl"></div>
+        </div>
+      ) : filteredTickets.length === 0 ? (
+        <div className="bg-white rounded-2xl border p-12 text-center text-gray-500 shadow-sm">
+          <Receipt size={52} className="text-gray-200 mx-auto mb-3" />
+          <p className="font-semibold text-sm">No se encontraron transacciones</p>
+          <p className="text-xs text-gray-400 mt-1">¡Los tickets se generan automáticamente al marcar una cita como entregada y cobrada!</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Nº Ticket</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Cliente / Mascota</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Fecha</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Pago</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-600">Base Imponible</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-600">IVA (21%)</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-600">Total Cobrado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredTickets.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-rose-50/20 transition-colors">
+                    <td className="px-4 py-3.5 font-bold text-rose-500">{inv.number}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="font-semibold text-gray-900">{inv.clientName}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">Mascota: {inv.petName} · {inv.serviceName}</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-gray-500 font-medium">{inv.date}</td>
+                    <td className="px-4 py-3.5">
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100 text-[10px] font-semibold">
+                        {getPaymentIcon(inv.paymentMethod)}
+                        {inv.paymentMethod === 'cash' ? 'EFECTIVO' : inv.paymentMethod === 'card' ? 'TARJETA' : 'BIZUM'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-medium text-gray-600">{formatCurrency(inv.base)}</td>
+                    <td className="px-4 py-3.5 text-right font-medium text-gray-500">{formatCurrency(inv.iva)}</td>
+                    <td className="px-4 py-3.5 text-right font-bold text-gray-900 text-base">{formatCurrency(inv.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

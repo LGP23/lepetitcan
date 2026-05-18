@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Search, User, Phone, Mail } from 'lucide-react'
+import { searchClientes } from '@/actions/clientes'
 
 interface Owner {
   id: string
@@ -32,9 +33,8 @@ export function ClientSearch({ onSelect, placeholder = 'Buscar cliente...' }: Cl
     const timer = setTimeout(async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/v1/clients?q=${encodeURIComponent(query)}&limit=10`)
-        const json = await res.json()
-        setResults(json.data || [])
+        const data = await searchClientes(query)
+        setResults(data as any || [])
         setOpen(true)
       } catch {
         setResults([])

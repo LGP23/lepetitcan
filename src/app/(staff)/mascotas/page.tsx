@@ -1,16 +1,7 @@
-'use client'
-
 import Link from 'next/link'
 import { Plus, Search, Dog, Cake, Users } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-
-const mockPets = [
-  { id: '1', name: 'Luna', breed: 'Golden Retriever', size: 'grande', age: '6 años', owners: ['Ana García', 'Pedro García'], lastVisit: '10/06/2026' },
-  { id: '2', name: 'Thor', breed: 'Caniche', size: 'pequeno', age: '3 años', owners: ['María Ruiz'], lastVisit: '08/06/2026' },
-  { id: '3', name: 'Kira', breed: 'Shih Tzu', size: 'pequeno', age: '2 años', owners: ['Ana García'], lastVisit: '05/06/2026' },
-  { id: '4', name: 'Max', breed: 'Bulldog Francés', size: 'mediano', age: '4 años', owners: ['Pedro López'], lastVisit: '01/06/2026' },
-  { id: '5', name: 'Rocky', breed: 'Yorkshire', size: 'toy', age: '5 años', owners: ['Carlos Fernández'], lastVisit: '28/05/2026' },
-]
+import { getMascotas } from '@/actions/mascotas'
 
 const sizeColors: Record<string, string> = {
   toy: 'bg-purple-100 text-purple-700',
@@ -24,13 +15,15 @@ const sizeLabels: Record<string, string> = {
   toy: 'Toy', pequeno: 'Pequeño', mediano: 'Mediano', grande: 'Grande', gigante: 'Gigante',
 }
 
-export default function PetsPage() {
+export default async function PetsPage() {
+  const pets = await getMascotas()
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Mascotas</h1>
-          <p className="text-sm text-muted-foreground mt-1">{mockPets.length} mascotas registradas</p>
+          <p className="text-sm text-muted-foreground mt-1">{pets.length} mascotas registradas</p>
         </div>
         <Link
           href="/mascotas/nueva"
@@ -48,7 +41,7 @@ export default function PetsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockPets.map((pet) => (
+        {pets.map((pet) => (
           <Link key={pet.id} href={`/mascotas/${pet.id}`}
             className="bg-white rounded-2xl border p-4 hover:shadow-md transition-shadow"
           >
@@ -58,22 +51,18 @@ export default function PetsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-gray-900">{pet.name}</h3>
-                <p className="text-xs text-muted-foreground">{pet.breed}</p>
+                <p className="text-xs text-muted-foreground">{pet.breed || 'Sin raza registrada'}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={sizeColors[pet.size].includes('purple') ? 'purple' : sizeColors[pet.size].includes('blue') ? 'info' : sizeColors[pet.size].includes('amber') ? 'warning' : 'primary'}>
-                    {sizeLabels[pet.size]}
+                  <Badge variant="default" className={`${sizeColors[pet.size] || 'bg-gray-100 text-gray-700'} border-0`}>
+                    {sizeLabels[pet.size] || pet.size}
                   </Badge>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Cake size={12} /> {pet.age}
-                  </span>
                 </div>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <Users size={12} /> {pet.owners.join(', ')}
+                <Users size={12} /> {pet.owners.map(o => o.owner.name).join(', ')}
               </span>
-              <span>{pet.lastVisit}</span>
             </div>
           </Link>
         ))}

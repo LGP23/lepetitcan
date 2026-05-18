@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -13,22 +13,26 @@ export default function NewClientPage() {
     source: 'presencial', prefChannel: 'whatsapp', marketingConsent: false,
   })
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+    setError('')
     try {
       const res = await fetch('/api/v1/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (res.ok) {
-        const json = await res.json()
-        router.push(`/clientes/${json.data.id}`)
+      const json = await res.json()
+      if (res.ok && json.data?.id) {
+        window.location.href = /clientes/
+      } else {
+        setError(json.error?.message || 'Error al guardar cliente')
       }
     } catch {
-      alert('Error al guardar')
+      setError('Error de conexi\u00f3n')
     }
     setSaving(false)
   }
@@ -40,6 +44,10 @@ export default function NewClientPage() {
       </Link>
 
       <h1 className="text-2xl font-semibold">Nuevo cliente</h1>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3">{error}</div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border p-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -54,12 +62,12 @@ export default function NewClientPage() {
               className="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Teléfono</label>
+            <label className="block text-sm font-medium mb-1">Tel\u00e9fono</label>
             <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300" />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium mb-1">Dirección</label>
+            <label className="block text-sm font-medium mb-1">Direcci\u00f3n</label>
             <input type="text" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
               className="w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-300" />
           </div>
@@ -74,7 +82,7 @@ export default function NewClientPage() {
               <option value="whatsapp">WhatsApp</option>
               <option value="instagram">Instagram</option>
               <option value="facebook">Facebook</option>
-              <option value="phone">Teléfono</option>
+              <option value="phone">Tel\u00e9fono</option>
               <option value="presencial">Presencial</option>
               <option value="ai_agent">Agente IA</option>
             </select>

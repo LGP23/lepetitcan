@@ -1,42 +1,50 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, Clock, Dog, Scissors } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ClientSearch } from '@/components/forms/client-search'
 import { formatCurrency } from '@/lib/utils/pricing'
-
-const mockServices = [
-  { id: 'Corte de Pelo', name: 'Corte de Pelo', duration: 60, prices: 'Fijo/Desde 30€' },
-  { id: 'Baño Completo', name: 'Baño Completo', duration: 45, prices: 'Fijo/Desde 20€' },
-  { id: 'Desenredado y Deslanado', name: 'Desenredado y Deslanado', duration: 90, prices: '30€/hora' },
-  { id: 'Corte de Uñas', name: 'Corte de Uñas', duration: 15, prices: 'Fijo/Desde 10€' },
-  { id: 'Limpieza de Oídos', name: 'Limpieza de Oídos', duration: 15, prices: 'Fijo/Desde 10€' },
-  { id: 'Cepillado Dental', name: 'Cepillado Dental', duration: 15, prices: 'Fijo/Desde 10€' },
-]
+import { getServices, createAppointment } from '@/actions/citas'
 
 const timeSlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30']
 
 export default function NewAppointmentPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const [services, setServices] = useState<any[]>([])
+  const [clientPets, setClientPets] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
-    ownerId: '', petId: '', serviceId: '', staffId: '',
+    ownerId: '', petId: '', serviceId: '', staffId: 'staff-1', // Default staff for now, should be from session
     date: '', time: '', duration: 60,
     priceType: 'fixed' as 'fixed' | 'hourly',
     estimatedHours: 1, notes: '', source: 'presencial',
   })
 
+  useEffect(() => {
+    getServices().then(setServices)
+  }, [])
+
   function handleClientSelect(client: any) {
     setForm({ ...form, ownerId: client.id })
+    setClientPets(client.pets?.map((p: any) => p.pet) || [])
     setStep(2)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    alert('Cita creada (modo demo)')
+    setLoading(true)
+    try {
+      await createAppointment(form)
+      router.push('/citas')
+    } catch (err) {
+      console.error(err)
+      alert('Error creating appointment')
+    }
+    setLoading(false)
   }
 
   return (
@@ -78,18 +86,25 @@ export default function NewAppointmentPage() {
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Seleccionar mascota</h2>
             <div className="grid grid-cols-2 gap-3">
-              {['Luna (Golden · Grande)', 'Kira (Shih Tzu · Pequeño)'].map((p) => (
-                <button key={p}
-                  onClick={() => setStep(3)}
-                  className="flex items-center gap-3 p-4 border rounded-xl hover:bg-rose-50 hover:border-rose-300 transition-colors text-left"
-                >
-                  <Dog size={24} className="text-rose-400" />
-                  <div>
-                    <p className="text-sm font-medium">{p.split(' (')[0]}</p>
-                    <p className="text-xs text-muted-foreground">{p.split('(')[1]?.replace(')', '')}</p>
-                  </div>
-                </button>
-              ))}
+              {clientPets.length === 0 ? (
+                <p className="text-sm text-muted-foreground col-span-2">Este cliente no tiene mascotas registradas.</p>
+              ) : (
+                clientPets.map((p) => (
+                  <button key={p.id}
+                    onClick={() => {
+                      setForm({ ...form, petId: p.id })
+                      setStep(3)
+                    }}
+                    className="flex items-center gap-3 p-4 border rounded-xl hover:bg-rose-50 hover:border-rose-300 transition-colors text-left"
+                  >
+                    <Dog size={24} className="text-rose-400" />
+                    <div>
+                      <p className="text-sm font-medium">{p.name}</p>
+                      <p className="text-xs text-muted-foreground">{p.breed || 'Sin raza'} · {p.size}</p>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
             <Button variant="outline" onClick={() => setStep(1)}>← Atrás</Button>
           </div>
@@ -102,9 +117,9 @@ export default function NewAppointmentPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Servicio</label>
               <div className="grid grid-cols-2 gap-2">
-                {mockServices.map((svc) => (
+                {services.map((svc) => (
                   <button key={svc.id}
-                    onClick={() => setForm({ ...form, serviceId: svc.id, duration: svc.duration })}
+                    onClick={() => setForm({ ...form, serviceId: svc.id, duration: svc.durationMinutes })}
                     className={`flex items-start gap-3 p-3 border rounded-xl text-left transition-colors ${
                       form.serviceId === svc.id ? 'bg-rose-50 border-rose-300' : 'hover:bg-gray-50'
                     }`}
@@ -112,7 +127,7 @@ export default function NewAppointmentPage() {
                     <Scissors size={18} className="text-rose-400 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">{svc.name}</p>
-                      <p className="text-xs text-muted-foreground">{svc.prices}</p>
+                      <p className="text-xs text-muted-foreground">Base: {formatCurrency(svc.basePrice)}</p>
                     </div>
                   </button>
                 ))}
@@ -161,11 +176,11 @@ export default function NewAppointmentPage() {
             <div className="bg-rose-50 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <Dog size={16} className="text-rose-500" />
-                <span className="font-medium">Luna</span> · Golden Retriever · Grande
+                <span className="font-medium">{clientPets.find(p => p.id === form.petId)?.name || 'Mascota'}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Scissors size={16} className="text-rose-500" />
-                {mockServices.find((s) => s.id === form.serviceId)?.name || 'Servicio'}
+                {services.find((s) => s.id === form.serviceId)?.name || 'Servicio'}
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Calendar size={16} className="text-rose-500" />
@@ -180,8 +195,7 @@ export default function NewAppointmentPage() {
             <div className="bg-amber-50 rounded-xl p-3 text-sm">
               <p className="font-medium text-amber-800">💰 Precio estimado</p>
               <p className="text-amber-600 text-xs mt-1">
-                El precio se calculará según el tamaño de la mascota y el servicio seleccionado.
-                Toy/Peq/Med: precio fijo. Grande/Gigante: según servicio (fijo u horas).
+                El precio se calculará según el tamaño de la mascota y el servicio seleccionado al finalizar la cita.
               </p>
             </div>
 
@@ -193,8 +207,8 @@ export default function NewAppointmentPage() {
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setStep(3)}>← Atrás</Button>
-              <Button onClick={handleSubmit}>
-                Confirmar y crear cita
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? 'Creando...' : 'Confirmar y crear cita'}
               </Button>
             </div>
           </div>
